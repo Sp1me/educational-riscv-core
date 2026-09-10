@@ -1,0 +1,14 @@
+# Build outputs
+build/
+obj_dir/
+*.vvp
+
+# Simulation waveforms
+*.vcd
+*.fst
+
+# Editor and operating-system files
+*.swp
+*~
+.DS_Store
+Thumbs.db
