@@ -4,7 +4,7 @@ module cpu (
 );
 reg [31:0] PC;
 reg [31:0] instr;
-reg [31:0] InstrMem [0:1023];
+reg [31:0] InstrMem [1023:0]; // 4KB instruction memory
 
 wire [4:0] rs1_addr;
 wire [4:0] rs2_addr;
@@ -16,13 +16,20 @@ wire [31:0] rs2_data;
 wire [31:0] imm;
 
 wire [3:0] alu_op;
+wire isJAL, isJALR, isALUimm, isALUreg;
 wire [31:0] operand_b;
 wire [31:0] alu_result;
 
 wire reg_write_en;
-wire writeback_en = resetn && reg_write_en && (state == EXECUTE_INSTR) && (isALUreg || isALUimm || isJAL || isJALR);
-wire [31:0] writeback_data = (isJAL || isJALR) ? (PC + 4) : alu_result; 
-wire [31:0] nextPC = isJAL  ? PC + Jimm : isJALR ? rs1 + Iimm : PC + 4;
+wire writeback_en = resetn && 
+                    reg_write_en && 
+                    (state == EXECUTE_INSTR) && 
+                    (isALUreg || isALUimm || isJAL || isJALR); 
+wire [31:0] writeback_data = (isJAL || isJALR) ? (PC + 4) : alu_result; //WHY IS WRITEBACK DATA FOR JAL AND JALR PC + 4? ISN'T IT SUPPOSED TO BE THE RETURN ADDRESS? OR IS THAT WHAT PC + 4 IS?
+wire [31:0] nextPC = 
+            isJAL  ? 
+            PC + imm : isJALR ? 
+            (rs1_data + imm) & 32'hFFFFFFFE: PC + 4; 
 
 // ========================================
 // Fetch decode execute state machine
@@ -43,10 +50,10 @@ always @(posedge clk) begin
                 state <= FETCH_REGS;
             end
             FETCH_REGS: begin
-                state <= EXECUTE_INSTR;
+                state <= EXECUTE_INSTR; 
             end
             EXECUTE_INSTR: begin
-                PC <= PC + nextPC;
+                PC <= nextPC;
                 state <= FETCH_INSTR;
             end
             default: state <= FETCH_INSTR;
@@ -57,7 +64,7 @@ end
 // ========================================
 // Mux to select between rs2 and immediate value for ALU input
 // ========================================
-assign operand_b = alu_src_imm ? imm : rs2_data;
+assign operand_b = alu_src_imm ? imm : rs2_data; 
 
 // ========================================
 // Decoder instantiation
@@ -70,7 +77,11 @@ decoder decoder_inst (
     .alu_op(alu_op),
     .imm(imm),
     .alu_src_imm(alu_src_imm),
-    .reg_write_en(reg_write_en)
+    .reg_write_en(reg_write_en),
+    .isJAL(isJAL),
+    .isJALR(isJALR),
+    .isALUimm(isALUimm),
+    .isALUreg(isALUreg)
 );
 
 // ========================================
@@ -80,7 +91,7 @@ alu alu_inst (
     .operand_a(rs1_data),
     .operand_b(operand_b),
     .alu_op(alu_op),
-    .result(alu_result)
+    .alu_result(alu_result)
 );
 
 // ========================================

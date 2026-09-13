@@ -1,16 +1,18 @@
-    `include "defines.vh"
-    module decoder (
-        input wire [31:0] instr,
+`include "defines.vh"
+module decoder (
+    input wire [31:0] instr,
 
-        output wire [4:0] rs1,
-        output wire [4:0] rs2,
-        output wire [4:0] rd,
+    output wire [4:0] rs1,
+    output wire [4:0] rs2,
+    output wire [4:0] rd,
 
-        output reg [3:0] alu_op,
-        output reg [31:0] imm,
-        output reg alu_src_imm,
-        output reg reg_write_en
-        );
+    output reg [3:0] alu_op,
+    output reg [31:0] imm,
+    output reg alu_src_imm,
+    output reg reg_write_en,
+    output wire isJAL, isJALR, isALUimm, isALUreg
+    
+    );
 
 // ========================================
 // Assigning constants based on instruction format
@@ -32,28 +34,28 @@ wire [31:0] Bimm={{20{instr[31]}}, instr[7],instr[30:25],instr[11:8],1'b0};
 wire [31:0] Jimm={{12{instr[31]}}, instr[19:12],instr[20],instr[30:21],1'b0};
 
 always @(*) begin
-        if (isALUimm || isJALR || isLoad)
-            imm = Iimm;
-        else if (isStore)
-            imm = Simm;
-        else if (isBranch)
-            imm = Bimm;
-        else if (isLUI || isAUIPC)
-            imm = Uimm;
-        else if (isJAL)
-            imm = Jimm;
-        else
-            imm = 32'b0;
+    if (isALUimm || isJALR || isLoad)
+        imm = Iimm;
+    else if (isStore)
+        imm = Simm;
+    else if (isBranch)
+        imm = Bimm;
+    else if (isLUI || isAUIPC)
+        imm = Uimm;
+    else if (isJAL)
+        imm = Jimm;
+    else
+        imm = 32'b0;
 end
 
 // ========================================
-//Defining instructions based on opcode
+// Defining instructions based on opcode
 // ========================================
-wire isALUreg  =  (opcode == 7'b0110011); // rd <- rs1 OP rs2
-wire isALUimm  =  (opcode == 7'b0010011); // rd <- rs1 OP Iimm
+assign isALUreg  =  (opcode == 7'b0110011); // rd <- rs1 OP rs2
+assign isALUimm  =  (opcode == 7'b0010011); // rd <- rs1 OP Iimm
 wire isBranch  =  (opcode == 7'b1100011); // if(rs1 OP rs2) PC<-PC+Bimm
-wire isJALR    =  (opcode == 7'b1100111); // rd <- PC+4; PC<-rs1+Iimm
-wire isJAL     =  (opcode == 7'b1101111); // rd <- PC+4; PC<-PC+Jimm
+assign isJALR    =  (opcode == 7'b1100111); // rd <- PC+4; PC<-rs1+Iimm
+assign isJAL     =  (opcode == 7'b1101111); // rd <- PC+4; PC<-PC+Jimm
 wire isAUIPC   =  (opcode == 7'b0010111); // rd <- PC + Uimm
 wire isLUI     =  (opcode == 7'b0110111); // rd <- Uimm
 wire isLoad    =  (opcode == 7'b0000011); // rd <- mem[rs1+Iimm]
@@ -66,7 +68,7 @@ always @(*) begin
     if (isALUreg || isALUimm) begin
         case (funct3)
             3'b000: begin
-                if (instr[30] && isALUreg)
+                if (instr[30] && isALUreg) 
                     alu_op = `ALU_SUB;
                 else
                     alu_op = `ALU_ADD;
@@ -90,7 +92,7 @@ end
 always @(*) begin
     reg_write_en = 1'b0;
         if (isALUreg || isALUimm || isLoad || isJAL || isJALR || isLUI || isAUIPC)
-        reg_write_en = 1'b1;
+            reg_write_en = 1'b1;
 end
 
 always @(*) begin

@@ -18,7 +18,7 @@ assign rs1_data = (rs1_addr == 5'd0) ? 32'b0 : RegisterBank[rs1_addr];
 assign rs2_data = (rs2_addr == 5'd0) ? 32'b0 : RegisterBank[rs2_addr];
 
 always@(posedge clk) begin
-    if (writeback_en && rd_addr != 5'd0)
+    if (writeback_en && rd_addr != 5'd0) //HOW DO WE KNOW WHAT RD ADDRESS IS??
         RegisterBank[rd_addr] <= writeback_data;
 end
 
